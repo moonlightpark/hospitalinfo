@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>굿닥 Android 설계도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 설계 도면처럼 왼쪽 목차 + 오른쪽 도면/명세 본문, 좁은 화면에서는 한 열 */
+:root {
+  --paper: #f6f8f8;
+  --sheet: #ffffff;
+  --ink: #1b2a2f;
+  --ink-soft: #536a70;
+  --rule: #d5e0e1;
+  --accent: #0f7c78;
+  --accent-soft: #e2f1ef;
+  --warn: #9a5b00;
+  --warn-soft: #fbf0dc;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1719; --sheet: #152124; --ink: #dde8e9; --ink-soft: #93abb0;
+    --rule: #284045; --accent: #4cc3bb; --accent-soft: #163633; --warn: #e6b45c; --warn-soft: #3a2c12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1719; --sheet: #152124; --ink: #dde8e9; --ink-soft: #93abb0;
+  --rule: #284045; --accent: #4cc3bb; --accent-soft: #163633; --warn: #e6b45c; --warn-soft: #3a2c12;
+  color-scheme: dark;
+}
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 40px 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+nav.toc li { counter-increment: s; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--rule); color: var(--ink-soft); text-decoration: none; }
+nav.toc a::before { content: counter(s) ". "; font-family: var(--font-mono); font-size: 11px; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+main { min-width: 0; display: grid; gap: 56px; }
+header.title { display: grid; gap: 14px; border-bottom: 2px solid var(--ink); padding-bottom: 24px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: 34px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+h2 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .no { font-family: var(--font-mono); font-size: 13px; color: var(--accent); font-weight: 500; }
+h3 { font-size: 16px; margin: 0; font-weight: 600; }
+p { margin: 0; max-width: 72ch; }
+.lede { color: var(--ink-soft); max-width: 72ch; }
+section { display: grid; gap: 18px; scroll-margin-top: 24px; }
+.titleblock { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); border: 1px solid var(--ink); background: var(--sheet); }
+.titleblock div { padding: 10px 14px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0; }
+.titleblock dt { font-size: 11px; color: var(--ink-soft); letter-spacing: .04em; }
+.titleblock dd { margin: 0; font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
+.figure { background: var(--sheet); border: 1px solid var(--rule); padding: 20px; overflow-x: auto; }
+.figure .cap { font-size: 12px; color: var(--ink-soft); margin-top: 10px; font-family: var(--font-mono); }
+pre.mermaid { margin: 0; background: transparent; text-align: center; }
+.tbl { overflow-x: auto; border: 1px solid var(--rule); background: var(--sheet); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 12px; color: var(--ink-soft); font-weight: 600; background: var(--paper); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+td code { overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--font-mono); font-size: 11.5px; padding: 2px 8px; border: 1px solid var(--rule); background: var(--paper); border-radius: 3px; white-space: nowrap; }
+.chip.m { border-color: var(--accent); color: var(--accent); }
+.chip.s { border-color: var(--warn); color: var(--warn); }
+.domains { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.domain { background: var(--sheet); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.domain .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.domain .count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.domain p { font-size: 13px; color: var(--ink-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-soft); align-items: center; }
+.tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 3px; white-space: nowrap; }
+.tag.obs { background: var(--accent-soft); color: var(--accent); }
+.tag.inf { background: var(--warn-soft); color: var(--warn); }
+.note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 12px 16px; font-size: 13.5px; }
+.note p + p { margin-top: 6px; }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+footer { font-size: 12px; color: var(--ink-soft); border-top: 1px solid var(--rule); padding-top: 16px; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 24px 60px; }
+  nav.toc { position: static; }
+  nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  h1 { font-size: 27px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="toc" aria-label="목차">
+    <ol>
+      <li><a href="#overview">개요</a></li>
+      <li><a href="#context">시스템 구성</a></li>
+      <li><a href="#layers">앱 레이어</a></li>
+      <li><a href="#features">기능·화면</a></li>
+      <li><a href="#api">서버 API</a></li>
+      <li><a href="#flows">핵심 흐름</a></li>
+      <li><a href="#native">네이티브 모듈</a></li>
+      <li><a href="#platform">권한·보안</a></li>
+      <li><a href="#sdk">외부 SDK</a></li>
+      <li><a href="#limits">근거와 한계</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="title">
+      <div class="eyebrow">Reverse-engineered software blueprint · Android</div>
+      <h1>굿닥(Goodoc) Android 앱 소프트웨어 설계도</h1>
+      <p class="lede">연결된 Galaxy S20+(SM-G986N)에 설치된 굿닥 앱의 APK를 추출해 정적 분석으로 재구성한 설계도입니다. 매니페스트, DEX 클래스, Hermes 바이트코드의 문자열 테이블을 근거로 삼았습니다. 앱을 실행하거나 네트워크 트래픽을 관찰하지는 않았습니다.</p>
+      <dl class="titleblock">
+        <div><dt>앱 이름</dt><dd>굿닥</dd></div>
+        <div><dt>패키지</dt><dd>com.ksncho.hospitalinfo</dd></div>
+        <div><dt>버전</dt><dd>50.14.29423 (code 29423)</dd></div>
+        <div><dt>SDK</dt><dd>target 36 · compile 36</dd></div>
+        <div><dt>ABI</dt><dd>arm64-v8a 단일</dd></div>
+        <div><dt>설치 경로</dt><dd>Google Play</dd></div>
+        <div><dt>APK 크기</dt><dd>100.7 MB (base 1개, split 없음)</dd></div>
+        <div><dt>APK SHA-256</dt><dd>8742c34d…de559aff</dd></div>
+        <div><dt>분석일</dt><dd>2026-10-28</dd></div>
+      </dl>
+    </header>
+
+    <section id="overview">
+      <h2><span class="no">01</span>개요</h2>
+      <p>굿닥 앱은 <strong>React Native(New Architecture, Hermes 엔진)</strong>로 만든 하이브리드 앱입니다. 화면과 비즈니스 로직은 11 MB 크기의 Hermes 바이트코드 번들(<code>assets/index.android.bundle</code>, HBC v96, 함수 48,863개)에 있습니다. Kotlin/Java 쪽은 앱 진입점과 기기 기능 4가지(GPS, 루팅 탐지, 로컬 푸시, 삼성 헬스)만 직접 구현했습니다.</p>
+      <p>서버 통신은 <strong>GraphQL(Apollo Client)</strong>이 중심입니다. 모바일 접수와 진료실 상태처럼 실시간성이 필요한 부분은 <strong>WebSocket과 GraphQL Subscription</strong>을 씁니다. 비대면 진료 화상통화는 <strong>Vonage OpenTok</strong>, 통화 수신 UI는 <strong>CallKeep(Android ConnectionService)</strong>로 구현합니다. JS 번들은 <strong>CodePush</strong>로 스토어 배포 없이 갱신할 수 있습니다.</p>
+      <div class="legend"><span><span class="tag obs">관찰</span> APK에서 직접 확인한 사실</span><span><span class="tag inf">추론</span> 이름·배치에서 유추한 해석</span></div>
+    </section>
+
+    <section id="context">
+      <h2><span class="no">02</span>시스템 구성도</h2>
+      <p class="lede">앱이 연결하는 굿닥 서버와 외부 서비스입니다. 도메인은 모두 번들과 매니페스트에 들어 있는 문자열에서 확인했습니다. 각 서버의 역할 설명은 도메인 이름과 함께 쓰인 연산에서 유추했습니다.</p>
+      <div class="figure">
+<pre class="mermaid">
+flowchart LR
+  subgraph Device["Android 기기"]
+    App["굿닥 앱<br/>React Native + Hermes"]
+    SH["삼성 헬스"]
+    PayApps["카드사·간편결제 앱"]
+  end
+  subgraph Goodoc["굿닥 백엔드 (*.goodoc.co.kr)"]
+    GQL["api-mobile<br/>/v1/mobile/graphql"]
+    GQLC["api-mobile-clinic<br/>/v1/mobile/graphql"]
+    SUB["api-subscription<br/>wss GraphQL 구독"]
+    SOCK["api-socket<br/>hospital-ws · mobile/receipt"]
+    RCPT["receipt-api · receipt-status"]
+    CFG["config.goodoc.co.kr<br/>/mobile · /search"]
+    STATIC["static · landing · link<br/>약관·웹뷰 페이지"]
+    AI["untact-ai 에이전트<br/>/api/agents/untact-ai/*"]
+  end
+  subgraph Ext["외부 서비스"]
+    OT["Vonage OpenTok<br/>화상진료"]
+    PG["PortOne · 토스페이먼츠<br/>결제"]
+    MAP["네이버 지도 · 카카오 로컬"]
+    AUTH["카카오 · Apple · Google 로그인"]
+    NHIS["건강보험공단 연동<br/>(검진·진료 내역)"]
+    OBS["Sentry · Amplitude · Firebase<br/>AppsFlyer · OneSignal · Loggly"]
+  end
+  App --> GQL & GQLC & RCPT & CFG & STATIC & AI
+  App <--> SUB
+  App <--> SOCK
+  App <--> OT
+  App --> PG --> PayApps
+  App --> MAP
+  App --> AUTH
+  App -. GraphQL 경유 .-> NHIS
+  App --> OBS
+  App <--> SH
+</pre>
+        <div class="cap">그림 1. 시스템 컨텍스트. 점선은 앱이 직접 호출하지 않고 굿닥 서버의 GraphQL 연산(NhisMedicalCheckupHistories 등)을 거치는 연동입니다.</div>
+      </div>
+    </section>
+
+    <section id="layers">
+      <h2><span class="no">03</span>앱 레이어 아키텍처</h2>
+      <div class="figure">
+<pre class="mermaid">
+flowchart TB
+  subgraph L1["표현 계층 · React Navigation (native-stack + bottom-tabs)"]
+    S1["화면 168개<br/>*Screen 컴포넌트"]
+    S2["바텀시트 (@gorhom/bottom-sheet) · 모달 · 웹뷰"]
+  end
+  subgraph L2["기능 패키지 (src/packages/*)"]
+    P1["host<br/>홈·검색·병원·약국·접수·예약"]
+    P2["untact<br/>비대면 진료·화상통화·AI 문진"]
+    P3["engage<br/>건강관리·검진·복약·성장기록"]
+  end
+  subgraph L3["상태 관리"]
+    C1["React Context Provider 50여 개<br/>ReceiptProvider · AuthProvider · VideoCallProvider …"]
+    C2["@tanstack/react-query<br/>서버 상태 캐시"]
+    C3["Apollo InMemoryCache"]
+    C4["zustand 스토어<br/>PaymentStore · UntactTreatmentStore"]
+  end
+  subgraph L4["데이터·통신"]
+    N1["Apollo Client + graphql-codegen 타입"]
+    N2["ky / axios REST"]
+    N3["graphql-ws · WebSocketProvider"]
+    N4["MMKV(Nitro) · AsyncStorage"]
+  end
+  subgraph L5["네이티브 브리지 · TurboModules / Nitro Modules / JSI"]
+    B1["굿닥 자체 모듈<br/>GpsUtils · Integrity · LocalPush · SamsungHealth"]
+    B2["오픈소스 모듈 40여 개<br/>OpenTok · CallKeep · NaverMap · Firebase · OneSignal …"]
+  end
+  subgraph L6["Android 플랫폼"]
+    A1["MainActivity · MainApplication"]
+    A2["ConnectionService · AlarmManager · WorkManager · FCM"]
+  end
+  L1 --> L2 --> L3 --> L4 --> L5 --> L6
+</pre>
+        <div class="cap">그림 2. 레이어 구조. 패키지 3개(host / untact / engage)의 이름은 번들에 남은 에셋 경로 <code>src/packages/…</code>에서 확인했습니다.</div>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>계층</th><th>구성 요소</th><th>근거</th></tr></thead>
+          <tbody>
+            <tr><td>런타임</td><td>React Native New Architecture, Hermes(HBC v96), Fabric 코드젠 라이브러리(<code>libreact_codegen_*</code>), Reanimated + Worklets</td><td><span class="tag obs">관찰</span> lib/arm64-v8a, <code>isNewArchEnabled</code>, <code>isHermesEnabled</code></td></tr>
+            <tr><td>내비게이션</td><td><code>@react-navigation/native-stack</code>, <code>bottom-tabs</code>, react-native-screens. 스택 이름: AuthStack, PermissionStack, MyInformationStack, MedicalCheckupStack, GrowthLogStack, BabyHeightStack, UntactPaymentStack</td><td><span class="tag obs">관찰</span> 번들 문자열</td></tr>
+            <tr><td>서버 상태</td><td>Apollo Client(GraphQL)와 TanStack React Query를 함께 사용. graphql-codegen으로 <code>…Document</code>, <code>…FragmentDoc</code> 타입을 생성</td><td><span class="tag obs">관찰</span> 패키지 목록, <code>CreateFamilyDocument</code> 등</td></tr>
+            <tr><td>클라이언트 상태</td><td>Context Provider 중심. 일부 도메인은 zustand 스토어</td><td><span class="tag inf">추론</span> Provider·Store 식별자 분포</td></tr>
+            <tr><td>폼·검증</td><td>react-hook-form + zod/yup 리졸버</td><td><span class="tag obs">관찰</span> <code>@hookform/resolvers</code>, <code>ZodError</code></td></tr>
+            <tr><td>로컬 저장</td><td>react-native-nitro-mmkv(암호화 키 사용), AsyncStorage, 로컬 푸시 템플릿은 네이티브 저장소(LocalPushStorage)</td><td><span class="tag obs">관찰</span> libNitroMmkv.so, <code>encryptionSecret</code></td></tr>
+            <tr><td>배포</td><td>CodePush(<code>@bravemobile/react-native-code-push</code>)로 JS 번들 OTA 갱신</td><td><span class="tag obs">관찰</span> <code>getJSBundleFile</code> 재정의, CodePushNativeModule</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="features">
+      <h2><span class="no">04</span>기능 도메인과 화면 구성</h2>
+      <p class="lede">번들에서 추출한 <code>*Screen</code> 식별자 168개를 도메인별로 묶었습니다. 라이브러리 내부 화면(RNSScreen 등)은 뺐습니다. 묶음은 이름을 기준으로 나눈 것이라 <span class="tag inf">추론</span>에 해당합니다.</p>
+      <div class="domains">
+        <div class="domain">
+          <div class="head"><h3>시작·인증·권한</h3><span class="count">22</span></div>
+          <p>스플래시, 온보딩, SNS/SSO 로그인, 약관 동의, 본인인증, 주민등록번호 입력, 권한 요청, CodePush 업데이트 진행</p>
+          <div class="chips"><span class="chip">SplashScreen</span><span class="chip">OnboardingScreen</span><span class="chip">AuthEntryScreen</span><span class="chip">SsoSignInScreen</span><span class="chip">SignupPageScreen</span><span class="chip">SignInTermScreen</span><span class="chip">TermsAgreementScreen</span><span class="chip">VerifyCertificationScreen</span><span class="chip">CertificationFormScreen</span><span class="chip">ResidentRegistrationNumberScreen</span><span class="chip">LocationPermissionScreen</span><span class="chip">NotificationPermissionScreen</span><span class="chip">UpdatingProgressScreen</span><span class="chip">RootErrorScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>홈·통합검색·병원</h3><span class="count">19</span></div>
+          <p>홈 탭, 키워드·지도 검색, 큐레이션, 병원·의사 상세, 찜한 병원, 진료비 지도, 매거진, 이벤트</p>
+          <div class="chips"><span class="chip">HomeScreen</span><span class="chip">MainTabScreen</span><span class="chip">UniversalSearchKeywordScreen</span><span class="chip">UniversalSearchMapScreen</span><span class="chip">UniversalSearchHospitalResultScreen</span><span class="chip">CurationScreen</span><span class="chip">HospitalDetailScreen</span><span class="chip">DoctorDetailScreen</span><span class="chip">HospitalLikesScreen</span><span class="chip">TreatmentAmountMapScreen</span><span class="chip">MagazinesScreen</span><span class="chip">PopupNoticeScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>모바일 접수 (Receipt)</h3><span class="count">17</span></div>
+          <p>병원 대기열에 바로 접수합니다. 환자 선택 → 증상 → 진료항목 → 주소 → 확인 → 완료 → 실시간 대기 상태 순서입니다. 420 계열은 별도 접수 유형입니다.</p>
+          <div class="chips"><span class="chip m">ReceiptRootScreen</span><span class="chip">ReceiptSelectPatientScreen</span><span class="chip">ReceiptSymptomsScreen</span><span class="chip">ReceiptTreatmentsScreen</span><span class="chip">ReceiptAddressScreen</span><span class="chip">ReceiptConfirmScreen</span><span class="chip">ReceiptCompleteScreen</span><span class="chip m">ReceiptStatusScreen</span><span class="chip">ReceiptHistoryDetailScreen</span><span class="chip">Receipt420Screen</span><span class="chip">Receipt420StatusScreen</span><span class="chip">FeedbackForWaitingTimeScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>진료 예약 (Appointment)</h3><span class="count">18</span></div>
+          <p>날짜·시간 슬롯 예약과 진료항목(시술) 예약입니다. 접수와 같은 단계 구조(환자 → 서비스 → 증상 → 확인)를 공유합니다.</p>
+          <div class="chips"><span class="chip m">AppointmentRootScreen</span><span class="chip">AppointmentSelectPatientScreen</span><span class="chip">AppointmentSelectServiceScreen</span><span class="chip">AppointmentSymptomsScreen</span><span class="chip">AppointmentConfirmScreen</span><span class="chip">AppointmentDetailScreen</span><span class="chip">Appointment420Screen</span><span class="chip">TreatmentItemListScreen</span><span class="chip">TreatmentItemSelectionScreen</span><span class="chip">TreatmentItemAppointmentScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>비대면 진료 (untact)</h3><span class="count">11</span></div>
+          <p>의사 선택 또는 매칭, AI 문진 채팅, 화상통화, 진료 상세, 결제, 처방전 확인, 의사 리뷰</p>
+          <div class="chips"><span class="chip m">UntactHospitalDoctorListScreen</span><span class="chip">DoctorMatchingCompletedScreen</span><span class="chip">SymptomScreen</span><span class="chip">AIChatScreen</span><span class="chip m">VideoCallScreen</span><span class="chip">UntactTreatmentDetailScreen</span><span class="chip">UntactPaymentStackScreen</span><span class="chip">PrescriptionDetailScreen</span><span class="chip">PrescriptionImageScreen</span><span class="chip">UntactDoctorReviewScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>약국·처방 조제</h3><span class="count">7</span></div>
+          <p>약국 검색·지도, 처방전 전송 약국 선택과 변경, 방문 약국 기록</p>
+          <div class="chips"><span class="chip">PharmacyScreen</span><span class="chip">PharmacyMapScreen</span><span class="chip">PharmacySearchScreen</span><span class="chip">PharmacyDetailScreen</span><span class="chip">SelectAnotherPharmacyScreen</span><span class="chip">VisitedPharmacyScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>건강관리 (engage)</h3><span class="count">33</span></div>
+          <p>건강 데이터(걸음 수·BMI·수분), 건강나이, 미션, 건강검진(NHIS) 연동, 의료비 혜택, 복약 알림, 아이 성장기록과 키 예측</p>
+          <div class="chips"><span class="chip">HealthManagementScreen</span><span class="chip">HealthAppIntegrationScreen</span><span class="chip">StepCountDetailsScreen</span><span class="chip">HealthAgeDetailScreen</span><span class="chip">HealthMissionStatisticsScreen</span><span class="chip m">MedicalCheckupStackScreen</span><span class="chip">NHISConnectScreen</span><span class="chip">MedicalExpenseBenefitScreen</span><span class="chip">MedicationListScreen</span><span class="chip">GrowthLogScreen</span><span class="chip">BabyHeightCalculatorScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>결제</h3><span class="count">4</span></div>
+          <p>결제수단 등록·수정·선택, 미결제 내역 (PortOne 빌링 연동)</p>
+          <div class="chips"><span class="chip">PaymentMethodAddScreen</span><span class="chip">PaymentMethodEditScreen</span><span class="chip">PaymentMethodSelectScreen</span><span class="chip">NonPaymentsListScreen</span></div>
+        </div>
+        <div class="domain">
+          <div class="head"><h3>마이페이지·가족·리뷰</h3><span class="count">30+</span></div>
+          <p>내 정보, 가족 구성원 관리, 주소록, 진료 이력, 리뷰 작성·조회, 알림, 설정, 고객센터, 투표 이벤트, 개발자 설정</p>
+          <div class="chips"><span class="chip">MoreScreen</span><span class="chip">MyInformationListScreen</span><span class="chip">FamilyListScreen</span><span class="chip">FamilyFormScreen</span><span class="chip">AddressSearchScreen</span><span class="chip">TreatmentHistoryScreen</span><span class="chip">ReviewFormScreen</span><span class="chip">MyReviewScreen</span><span class="chip">NotificationsScreen</span><span class="chip">SettingsScreen</span><span class="chip">HelpDeskScreen</span><span class="chip">VoteEventScreen</span><span class="chip s">DeveloperSettingScreen</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="api">
+      <h2><span class="no">05</span>서버 API 설계</h2>
+      <h3>엔드포인트</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>엔드포인트</th><th>프로토콜</th><th>용도</th></tr></thead>
+          <tbody>
+            <tr><td><code>https://api-mobile.goodoc.co.kr/v1/mobile/graphql</code></td><td>GraphQL (HTTPS)</td><td>앱 기본 API: 사용자, 병원, 검색, 리뷰, 건강 등 <span class="tag inf">추론</span></td></tr>
+            <tr><td><code>https://api-mobile-clinic.goodoc.co.kr/v1/mobile/graphql</code></td><td>GraphQL (HTTPS)</td><td>진료 관련 API: 비대면 진료, 처방, 결제로 추정 <span class="tag inf">추론</span></td></tr>
+            <tr><td><code>wss://api-subscription.goodoc.co.kr/graphql</code></td><td>graphql-ws</td><td>구독: <code>treatmentChanged</code>, <code>appointmentChanged</code>, <code>pharmacyPrescriptionOrderChanged</code></td></tr>
+            <tr><td><code>wss://api-socket.goodoc.co.kr/hospital-ws</code><br><code>https://api-socket.goodoc.co.kr/mobile/receipt</code></td><td>WebSocket</td><td>병원 접수·대기열 실시간 상태 (WebSocketProvider)</td></tr>
+            <tr><td><code>receipt-api.goodoc.co.kr</code>, <code>receipt-status.goodoc.co.kr</code></td><td>REST</td><td>접수·예약·진료실 REST. 경로 예: <code>/user/exam-room/validate-receipt/</code>, <code>/user/appt-slot/available-slots/</code>, <code>/user/receipt/receipts/today/with-review</code> <span class="tag inf">추론</span>(경로와 호스트가 짝을 이루는지는 미확인)</td></tr>
+            <tr><td><code>/api/agents/untact-ai/chat/</code> · <code>chat-suggestions</code> · <code>daily-usage</code></td><td>REST</td><td>비대면 진료 AI 문진 채팅, 추천 질문, 일일 사용량</td></tr>
+            <tr><td><code>config.goodoc.co.kr/mobile</code>, <code>/search</code></td><td>HTTPS JSON</td><td>앱·검색 원격 설정 (Firebase Remote Config와 함께 사용)</td></tr>
+            <tr><td><code>static.goodoc.co.kr</code>, <code>landing.goodoc.co.kr</code>, <code>link.goodoc.co.kr</code></td><td>HTTPS</td><td>약관 원문, 주소 검색 웹뷰, NHIS 정책 페이지, 마케팅 링크</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>GraphQL 연산 (query 132 · mutation 77 · subscription 8)</h3>
+      <p class="lede">이름이 붙은 연산을 도메인별로 정리했습니다. 문자열 조각(<code>and</code>, <code>field</code> 등)은 뺐습니다. <span class="chip m">mutation</span> <span class="chip">query</span> <span class="chip s">subscription</span></p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>도메인</th><th>연산</th></tr></thead>
+          <tbody>
+            <tr><td>인증·회원</td><td><div class="chips"><span class="chip m">SignInSocial</span><span class="chip m">SignInDevice</span><span class="chip m">RotateRefreshToken</span><span class="chip m">GenerateRefreshTokenByAccessToken</span><span class="chip m">requestIdentityVerification</span><span class="chip m">VerifyIdentityAndCreateMyPatient</span><span class="chip m">applyTermsOfService</span><span class="chip m">UserUpdate</span><span class="chip m">UserDelete</span><span class="chip">User</span><span class="chip">checkSocialSignedUp</span><span class="chip">termsOfServices</span><span class="chip">consents</span></div></td></tr>
+            <tr><td>가족·환자</td><td><div class="chips"><span class="chip m">createFamily</span><span class="chip m">updateFamily</span><span class="chip m">deleteFamily</span><span class="chip m">createFamilyConsentHistory</span><span class="chip m">updatePatient</span><span class="chip">family</span><span class="chip">FamilyConsents</span><span class="chip">findPatientInChart</span><span class="chip">hasReceiptPatientInPatient</span></div></td></tr>
+            <tr><td>검색·병원</td><td><div class="chips"><span class="chip">universalSearch</span><span class="chip">SearchV2HomeHospitals</span><span class="chip">SearchV2Autocompletes</span><span class="chip">searchHospitalHighlight</span><span class="chip">hospitalDetail</span><span class="chip">HospitalTimeTable</span><span class="chip">HospitalNotices</span><span class="chip">rankHospitals</span><span class="chip">CurationHospitals</span><span class="chip">MedicalCurations</span><span class="chip">doctor</span><span class="chip m">UpdateHospitalLike</span><span class="chip m">toggleBookmark</span><span class="chip m">CreateSearchedKeyword</span></div></td></tr>
+            <tr><td>접수</td><td><div class="chips"><span class="chip">MobileReceiptAvailability</span><span class="chip">MobileReceiptCountOfToday</span><span class="chip">HospitalReceiptStatus</span><span class="chip">ReceiptHospital</span><span class="chip">ReceiptSymptoms</span><span class="chip">ReceiptHistoryWaitingOrderInQueue</span><span class="chip m">ReceiptHistoryCancelReceiptInQueue</span><span class="chip m">UpdateGoogleSpreadsheetForNonlinkReceipt</span></div></td></tr>
+            <tr><td>예약</td><td><div class="chips"><span class="chip">AvailableAppointmentDates</span><span class="chip">TimeSlots</span><span class="chip">AppointmentHospital</span><span class="chip">Appointment</span><span class="chip">checkHospitalAppointmentStatus</span><span class="chip m">CreateAppointment</span><span class="chip m">RequestAppointmentCancellation</span><span class="chip m">DeleteAppointment</span><span class="chip m">createAppointmentConsentHistory</span><span class="chip s">appointmentChanged</span></div></td></tr>
+            <tr><td>비대면 진료</td><td><div class="chips"><span class="chip">untactDepartments</span><span class="chip">untactDoctors</span><span class="chip">untactDoctorStatus</span><span class="chip">untactQuestionnaire</span><span class="chip">opentokConnection</span><span class="chip">progressingTreatment</span><span class="chip">treatmentV3</span><span class="chip">GetReTreatmentLimit</span><span class="chip m">CreateTreatmentWithPaymentMethod</span><span class="chip m">createUntactQuestionnaireResponse</span><span class="chip m">createSymptomImage</span><span class="chip m">updateTreatmentEndCall</span><span class="chip m">publishRejectCall</span><span class="chip m">updateTreatmentCancel</span><span class="chip s">treatmentChanged</span></div></td></tr>
+            <tr><td>처방·약국</td><td><div class="chips"><span class="chip">prescription</span><span class="chip">pharmacyDetail</span><span class="chip">searchPharmacies</span><span class="chip">searchUntactPharmaciesPagination</span><span class="chip">untactDispensedPharmacySearch</span><span class="chip m">CreatePharmacyPrescriptionOrder</span><span class="chip m">PaymentPharmacyPrescriptionOrder</span><span class="chip m">CancelPharmacyPrescriptionOrder</span><span class="chip m">UpdatePrescriptionOrderToReceived</span><span class="chip m">sendFaxVisitDelivery</span><span class="chip s">pharmacyPrescriptionOrderChanged</span></div></td></tr>
+            <tr><td>결제</td><td><div class="chips"><span class="chip">MyPaymentMethods</span><span class="chip">NonPayments</span><span class="chip m">CreatePaymentMethodV2</span><span class="chip m">DeletePaymentMethodV2</span><span class="chip m">CreateTreatmentPaymentV2</span></div></td></tr>
+            <tr><td>건강·검진</td><td><div class="chips"><span class="chip">NhisMedicalCheckupHistoriesV2</span><span class="chip">nhisMedicalHistories</span><span class="chip m">AuthNhisMedicalCheckupHistories</span><span class="chip m">RefreshNhisMedicalCheckupHistories</span><span class="chip m">NhisTreatmentAndDrugContentsAsync</span><span class="chip">ExternalPollingJobStatus</span><span class="chip">UserHealthMetricLogs</span><span class="chip">UserHealthWeeklySummaries</span><span class="chip">UserWeeklyHealthMissions</span><span class="chip m">CreateUserHealthMetricLogBySelf</span><span class="chip">MedicineAlarms</span><span class="chip m">UpdateMedicineTaken</span><span class="chip">patientGrowthLogs</span><span class="chip m">savePatientGrowthLog</span></div></td></tr>
+            <tr><td>리뷰·콘텐츠</td><td><div class="chips"><span class="chip">Reviews</span><span class="chip">ReviewSummary</span><span class="chip m">createReview</span><span class="chip m">ReportReview</span><span class="chip m">ReviewLike</span><span class="chip">magazines</span><span class="chip">AppBanners</span><span class="chip">goodocPopups</span><span class="chip">votingEvents</span><span class="chip m">participatingInVotingEvent</span><span class="chip">Notifications</span><span class="chip m">UpdateNotificationSetting</span></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="flows">
+      <h2><span class="no">06</span>핵심 흐름</h2>
+      <p class="lede">화면 순서, 연산 이름, 구독 이벤트를 이어 붙여 재구성한 흐름입니다. 실제 호출 순서는 실행해서 확인하지 않았으므로 모두 <span class="tag inf">추론</span>입니다.</p>
+      <div class="two">
+        <div class="figure">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as 사용자
+  participant A as 앱 (Receipt 스택)
+  participant G as GraphQL / receipt-api
+  participant W as api-socket (WS)
+  U->>A: 병원 상세에서 접수 시작
+  A->>G: MobileReceiptAvailability
+  A->>G: validate-receipt
+  U->>A: 환자·증상·진료항목·주소 선택
+  A->>G: 접수 생성 (동의 이력 포함)
+  G-->>A: 접수번호·대기순번
+  A->>W: hospital-ws 연결
+  W-->>A: 대기열 변경 이벤트
+  A->>U: ReceiptStatusScreen 갱신
+  A->>U: 로컬 푸시 예약 (LocalPushModule)
+</pre>
+          <div class="cap">그림 3. 모바일 접수와 실시간 대기 상태</div>
+        </div>
+        <div class="figure">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as 환자
+  participant A as 앱 (untact)
+  participant G as api-mobile-clinic
+  participant S as api-subscription
+  participant O as OpenTok
+  participant P as 약국
+  U->>A: 진료과·의사 선택, 문진·AI 채팅
+  A->>G: CreateTreatmentWithPaymentMethod
+  A->>S: treatmentChanged 구독
+  S-->>A: 의사 수락·호출
+  A->>U: CallKeep 수신 화면
+  A->>G: opentokConnection (세션·토큰)
+  A->>O: 화상통화 연결 (VideoCallScreen)
+  A->>G: updateTreatmentEndCall
+  A->>G: CreateTreatmentPaymentV2
+  U->>A: 약국 선택
+  A->>G: CreatePharmacyPrescriptionOrder
+  S-->>A: pharmacyPrescriptionOrderChanged
+  P-->>U: 조제 완료·수령
+</pre>
+          <div class="cap">그림 4. 비대면 진료부터 처방 조제까지</div>
+        </div>
+      </div>
+      <div class="figure">
+<pre class="mermaid">
+flowchart LR
+  L["앱 실행"] --> SP["SplashScreen<br/>CodePush 확인"]
+  SP -->|업데이트 있음| UP["UpdatingProgressScreen"]
+  SP --> INIT["InitializerStack<br/>Remote Config · 토큰 회전"]
+  INIT -->|비로그인| ON["Onboarding → AuthEntry<br/>Kakao / Apple / Google / SSO"]
+  ON --> TERM["약관 동의 · 본인인증"]
+  TERM --> PERM["PermissionStack<br/>위치 · 알림"]
+  INIT -->|로그인| MAIN["MainTab"]
+  PERM --> MAIN
+  MAIN --> T1["홈"] & T2["검색·지도"] & T3["건강"] & T4["진료내역"] & T5["더보기"]
+  DL["딥링크<br/>goodoc:// · goodoc.onelink.me"] -.-> MAIN
+</pre>
+        <div class="cap">그림 5. 앱 시작과 인증 흐름. 탭 구성은 화면 이름에서 유추했습니다.</div>
+      </div>
+    </section>
+
+    <section id="native">
+      <h2><span class="no">07</span>네이티브 모듈 (굿닥 자체 구현)</h2>
+      <p class="lede"><code>com.ksncho.hospitalinfo</code> 아래의 Kotlin 클래스 52개 중 JS에 노출되는 모듈입니다. 모두 <code>GoodocAppPackage</code>에서 등록합니다. 메서드 이름은 DEX에서 직접 확인했습니다 <span class="tag obs">관찰</span>.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>모듈</th><th>JS 노출 메서드</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td><code>GpsUtilsModule</code></td><td><code>isDeviceGPSOn</code>, <code>checkDeviceGPS</code></td><td>GPS 꺼짐 확인과 위치 설정 켜기 요청 (REQUEST_CHECK_SETTINGS)</td></tr>
+            <tr><td><code>IntegrityModule</code></td><td><code>isDeviceCompromised</code>, <code>getKeyHash</code>, <code>getBuildConfig</code></td><td>루팅 탐지(su 경로, <code>which su</code>, test-keys 빌드 태그), 서명 키 해시 조회. JailMonkey 라이브러리와 함께 사용</td></tr>
+            <tr><td><code>LocalPushModule</code></td><td><code>schedule</code>, <code>scheduleFromTemplateId</code>, <code>cancel</code>, <code>cancelAll</code>, <code>cancelByDeepLink</code>, <code>cancelExpiredNonRepeating</code>, <code>getScheduled</code>, <code>storeTemplate</code>, <code>storeMessageTemplate</code>, <code>removeTemplate</code></td><td>AlarmManager 기반 로컬 알림. 템플릿에 제목·본문·딥링크·지연·반복 규칙(RepeatRule)을 담아 네이티브 저장소(LocalPushStorage)에 보관. 복약 알림과 접수 알림에 쓰는 것으로 보임 <span class="tag inf">추론</span></td></tr>
+            <tr><td><code>SamsungHealthModule</code></td><td><code>initializeHealthStore</code>, <code>requestHealthPermissions</code>, <code>checkHealthPermissionsGranted</code>, <code>getTodayPreviewStatistics</code>, <code>openSamsungHealthApp</code></td><td>Samsung Health Data SDK 연동. 일별 걸음 수, 수면, 심박, 활동 에너지, 혈당, 혈압, 수분 통계 조회 (SamsungHealthDaily)</td></tr>
+            <tr><td><code>NotificationServiceExtension</code></td><td>(OneSignal 확장)</td><td>원격 푸시 수신 시 표시 전에 가공</td></tr>
+            <tr><td><code>MainActivity</code> / <code>MainApplication</code></td><td><code>getMainComponentName</code>, <code>getJSBundleFile</code></td><td>RN 호스트. CodePush 번들 경로 지정, 화상통화용 다이얼 화면 레이아웃(DialScreenBinding) 보유</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="platform">
+      <h2><span class="no">08</span>권한과 보안 설계</h2>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>기능 묶음</th><th>권한</th><th>연결된 기능</th></tr></thead>
+          <tbody>
+            <tr><td>위치</td><td><code>ACCESS_FINE/COARSE_LOCATION</code></td><td>주변 병원·약국 검색, 지도</td></tr>
+            <tr><td>화상진료·통화</td><td><code>CAMERA</code>, <code>RECORD_AUDIO</code>, <code>MODIFY_AUDIO_SETTINGS</code>, <code>BLUETOOTH_CONNECT</code>, <code>MANAGE_OWN_CALLS</code>, <code>CALL_PHONE</code>, <code>READ_PHONE_STATE/NUMBERS</code>, <code>USE_FULL_SCREEN_INTENT</code>, <code>SYSTEM_ALERT_WINDOW</code></td><td>OpenTok 영상, CallKeep 수신 화면(foregroundServiceType: camera|microphone)</td></tr>
+            <tr><td>알림</td><td><code>POST_NOTIFICATIONS</code>, <code>SCHEDULE_EXACT_ALARM</code>, <code>USE_EXACT_ALARM</code>, <code>RECEIVE_BOOT_COMPLETED</code>, 제조사별 배지 권한</td><td>원격 푸시(FCM, OneSignal), 로컬 푸시</td></tr>
+            <tr><td>광고·측정</td><td><code>AD_ID</code>, <code>ACCESS_ADSERVICES_*</code>, Install Referrer</td><td>AppsFlyer, Firebase Analytics</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="two">
+        <div class="domain">
+          <h3>보안 장치 <span class="tag obs">관찰</span></h3>
+          <ul class="plain">
+            <li>루팅 탐지: IntegrityModule과 JailMonkey(<code>libtoolChecker.so</code>)</li>
+            <li>MMKV 저장소 암호화 키 사용(<code>encryptionSecret</code>)</li>
+            <li>토큰 회전: <code>RotateRefreshToken</code>, <code>GenerateRefreshTokenByAccessToken</code></li>
+            <li>주민등록번호·민감정보 수집 시 별도 동의(<code>consent-receipt-hospital-rrn-collection</code>, <code>…-sensitive-collection</code>)</li>
+            <li>자체 컴포넌트 중 외부에 공개(exported)된 것은 MainActivity와 OneSignal 알림 확장 서비스뿐이고, LocalPushModuleReceiver 등은 비공개</li>
+          </ul>
+        </div>
+        <div class="domain">
+          <h3>딥링크와 앱 연계 <span class="tag obs">관찰</span></h3>
+          <ul class="plain">
+            <li>커스텀 스킴 <code>goodoc://</code> (예: <code>app/hospital/details/</code>, <code>app/pharmacy/details/</code>, <code>app/babyHeightCalculator</code>)</li>
+            <li>AppsFlyer OneLink <code>https://goodoc.onelink.me/7srm</code></li>
+            <li>카카오 OAuth 리다이렉트(<code>…://oauth</code>)</li>
+            <li>결제 앱 호출용 <code>&lt;queries&gt;</code>: 국민·신한·현대·삼성·우리·NH 카드, 토스, 카카오톡, ISP 등 20여 개</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="sdk">
+      <h2><span class="no">09</span>외부 SDK와 연동</h2>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>분류</th><th>SDK / 라이브러리</th></tr></thead>
+          <tbody>
+            <tr><td>화상통화</td><td>Vonage OpenTok(<code>libopentok.so</code>, opentok-react-native), react-native-callkeep(굿닥 포크)</td></tr>
+            <tr><td>지도·위치</td><td>네이버 지도 SDK(<code>@mj-studio/react-native-naver-map</code>), 네이버 Reverse Geocode, 카카오 로컬 API, community geolocation</td></tr>
+            <tr><td>로그인</td><td>카카오 로그인(<code>@react-native-seoul/kakao-login</code>), Apple 로그인, Google Sign-In, Facebook SDK</td></tr>
+            <tr><td>결제</td><td>PortOne(<code>@portone/react-native-sdk</code>), 토스페이먼츠 안내 페이지</td></tr>
+            <tr><td>푸시</td><td>OneSignal, Firebase Cloud Messaging, 자체 LocalPush</td></tr>
+            <tr><td>분석·마케팅</td><td>Amplitude(세션 리플레이 설정 포함), Firebase Analytics, AppsFlyer, Loggly(굿닥 포크)</td></tr>
+            <tr><td>품질·운영</td><td>Sentry(네이티브 포함), Firebase Remote Config, CodePush, Google Play In-App Review</td></tr>
+            <tr><td>건강 데이터</td><td>Samsung Health Data SDK. 걸음 수·수면·심박 읽기 권한을 매니페스트 메타데이터로 선언</td></tr>
+            <tr><td>UI</td><td>Reanimated, Gesture Handler, gorhom bottom-sheet, Lottie, SVG, PagerView, TurboImage, BootSplash, Edge-to-Edge, ImagePicker + uCrop</td></tr>
+            <tr><td>제휴 웹</td><td>바비톡(<code>web.babitalk.com</code>) 시술 검색 링크, 클리닉마켓, 클라우드게이트 웹챗(상담)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="limits">
+      <h2><span class="no">10</span>분석 근거와 한계</h2>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>근거</th><th>방법</th><th>얻은 것</th></tr></thead>
+          <tbody>
+            <tr><td>APK 추출</td><td>REA <code>pull_adb_package</code> (기기 R3CN302BAYV)</td><td>base.apk 1개, SHA-256 <code>8742c34dd993a8f2f87c84020ee123f36caca3c542921d6a958c42c4de559aff</code></td></tr>
+            <tr><td>매니페스트</td><td>aapt2 <code>dump xmltree</code></td><td>컴포넌트, 권한, 인텐트 필터, 메타데이터</td></tr>
+            <tr><td>DEX 4개</td><td>dexdump 클래스·메서드 목록 (30,737 클래스)</td><td>네이티브 모듈 구성과 메서드 이름</td></tr>
+            <tr><td>Hermes 번들</td><td>HBC v96 헤더를 파싱해 문자열 테이블 53,783개 추출</td><td>화면, GraphQL 연산, URL, 라이브러리, Provider 이름</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <p><strong>이 설계도에 없는 것.</strong> 정적 분석만 했고 앱을 실행하거나 트래픽을 캡처하지 않았습니다. 그래서 실제 호출 순서, 요청·응답 스키마, 서버 내부 구조는 확인하지 못했습니다. 6장의 흐름도와 서버별 역할 구분은 이름을 근거로 한 추론입니다.</p>
+        <p>Hermes 바이트코드는 디컴파일하지 않았습니다(JADX와 Hermes 디컴파일러가 이 환경에 없음). 따라서 함수 단위 로직, 화면 사이 이동 조건, 상태 갱신 규칙은 다루지 않았습니다. REST 경로가 어느 호스트에 붙는지도 확정하지 못했습니다.</p>
+        <p>번들과 매니페스트에 있는 API 키, DSN, 배포 키 같은 값은 이 문서에 옮기지 않았습니다.</p>
+      </div>
+    </section>
+
+    <footer>굿닥 Android 50.14.29423 · 정적 역분석 결과 · 2026-10-28 작성</footer>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default", securityLevel: "strict" });
+</script>
+</body>
+</html>
