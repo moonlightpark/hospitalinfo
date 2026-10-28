@@ -129,13 +129,14 @@ footer { font-size: 12px; color: var(--ink-soft); border-top: 1px solid var(--ru
       <li><a href="#platform">권한·보안</a></li>
       <li><a href="#sdk">외부 SDK</a></li>
       <li><a href="#events">분석 이벤트</a></li>
+      <li><a href="#dynamic">동적 분석</a></li>
       <li><a href="#limits">근거와 한계</a></li>
     </ol>
   </nav>
 
   <main>
     <header class="title">
-      <div class="eyebrow">Reverse-engineered software blueprint · Android · 상세판 v2</div>
+      <div class="eyebrow">Reverse-engineered software blueprint · Android · 상세판 v3</div>
       <h1>굿닥(Goodoc) Android 앱 소프트웨어 설계도</h1>
       <p class="lede">연결된 Galaxy S20+(SM-G986N)에서 추출한 굿닥 APK를 정적 분석해 재구성했습니다. 이번 판은 Hermes 바이트코드를 의사 JS로 디컴파일(함수 48,863개)하고, 번들에 들어 있는 GraphQL 문서 전문 197개와 데이터 모델, 내비게이션 라우트, 분석 이벤트까지 복원해 넓혔습니다. 앱을 실행하거나 트래픽을 캡처하지는 않았습니다.</p>
       <dl class="titleblock">
@@ -425,6 +426,51 @@ flowchart TB
       <div class="chips">
         <span class="chip">TreatmentStatusEnum</span><span class="chip">VideoCallStatusEnum</span><span class="chip">WebcamStatusEnum</span><span class="chip">UntactStatusEnum</span><span class="chip">UntactServiceStatusEnum</span><span class="chip">ReceiptStatusEnum</span><span class="chip">ReceiptTypeEnum</span><span class="chip">ReceiptWaitingTypeEnum</span><span class="chip">ReservationStatusEnum</span><span class="chip">TreatmentItemAppointmentStatusEnum</span><span class="chip">Payment* (status/provider/type)</span><span class="chip">PrescriptionState</span><span class="chip">AppointmentCancelReasonEnum</span><span class="chip">MobileCarrierEnum</span><span class="chip">AgreementTypeEnum</span><span class="chip">NotificationTypeEnum</span><span class="chip">UserHealthMetricLogDataTypeEnum</span><span class="chip">QuestionnaireTypeEnum</span>
       </div>
+      <h3 style="margin-top:8px">도메인 상태 머신</h3>
+      <p class="lede">graphql-codegen enum 정의에서 복원한 실제 상태 값입니다 <span class="tag obs">관찰</span>.</p>
+      <div class="two">
+        <div class="figure">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> waiting
+  waiting --> request
+  request --> ontreatment
+  request --> matchingfail
+  ontreatment --> endcall
+  ontreatment --> treatmenterror
+  endcall --> orderprescription
+  orderprescription --> completion
+  waiting --> cancel
+  request --> cancel
+</pre>
+          <div class="cap">그림 6. TreatmentStatusEnum — 비대면 진료 상태</div>
+        </div>
+        <div class="figure">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> createdSession
+  createdSession --> matched
+  matched --> patientJoined
+  matched --> doctorJoined
+  patientJoined --> doctorJoined
+  doctorJoined --> doctorLeft
+  doctorJoined --> patientLeft
+</pre>
+          <div class="cap">그림 7. VideoCallStatusEnum — 화상통화 상태</div>
+        </div>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>enum</th><th>값</th></tr></thead>
+          <tbody>
+            <tr><td><code>ReceiptStatusEnum</code> (접수)</td><td>정상 <code>C00 C01 C02 C03 C04 C06 C07 C08</code> · 실패 <code>F02 F03 F05</code></td></tr>
+            <tr><td><code>ReceiptWaitingTypeEnum</code></td><td><code>minute</code>(분 단위) · <code>person</code>(순번)</td></tr>
+            <tr><td><code>TreatmentMethodTypeEnum</code></td><td><code>phoneCall</code> · <code>videoCall</code></td></tr>
+            <tr><td><code>PaymentStatusEnum</code></td><td><code>requested → confirmationRequested → paymentCompleted / paymentFailed → refundCompleted / refundFailed</code></td></tr>
+            <tr><td><code>UntactServiceStatusEnum</code></td><td><code>active · deleted · none</code></td></tr>
+          </tbody>
+        </table>
+      </div>
       <h3 style="margin-top:8px">연산 카탈로그 (전체 197개)</h3>
       <p class="lede"><span class="chip m">mutation</span> <span class="chip">query</span> <span class="chip s">subscription</span> — 이름과 주요 입력 변수</p>
       <div class="figure"><div class="oplist" id="oplist"></div></div>
@@ -511,7 +557,7 @@ sequenceDiagram
           <thead><tr><th>모듈</th><th>JS 노출 메서드</th><th>역할</th></tr></thead>
           <tbody>
             <tr><td><code>GpsUtilsModule</code></td><td><code>isDeviceGPSOn</code>, <code>checkDeviceGPS</code></td><td>GPS 꺼짐 확인과 위치 설정 켜기 요청</td></tr>
-            <tr><td><code>IntegrityModule</code></td><td><code>isDeviceCompromised</code>, <code>getKeyHash</code>, <code>getBuildConfig</code></td><td>루팅 탐지(su 경로, <code>which su</code>, test-keys 태그), 서명 키 해시. JailMonkey 병용</td></tr>
+            <tr><td><code>IntegrityModule</code></td><td><code>isDeviceCompromised</code>, <code>getKeyHash</code>, <code>getBuildConfig</code></td><td>루팅 탐지: su 바이너리 13종 경로 존재 확인(<code>/su/bin/su</code>, <code>/magisk/.core/bin/su</code>, SuperSU/Superuser.apk 등), <code>ProcessBuilder</code>로 <code>which su</code>·<code>sh -c</code> 실행 후 출력에 su 포함 검사, <code>Build.TAGS</code>의 test-keys 검사. 서명 <code>signatures</code>→SHA 해시로 keyHash. 백그라운드 Executor, 실패 시 ROOT_CHECK_ERROR. JailMonkey 병용 <span class="tag obs">관찰(dexdump)</span></td></tr>
             <tr><td><code>LocalPushModule</code></td><td><code>schedule</code>, <code>scheduleFromTemplateId</code>, <code>cancel/All</code>, <code>cancelByDeepLink</code>, <code>cancelExpiredNonRepeating</code>, <code>getScheduled</code>, <code>storeTemplate</code>, <code>storeMessageTemplate</code></td><td>AlarmManager 로컬 알림. 템플릿(제목·본문·딥링크·지연·반복)을 LocalPushStorage에 보관</td></tr>
             <tr><td><code>SamsungHealthModule</code></td><td><code>initializeHealthStore</code>, <code>requestHealthPermissions</code>, <code>checkHealthPermissionsGranted</code>, <code>getTodayPreviewStatistics</code>, <code>openSamsungHealthApp</code></td><td>Samsung Health Data SDK. 걸음·수면·심박·활동에너지·혈당·혈압·수분 통계</td></tr>
             <tr><td><code>NotificationServiceExtension</code></td><td><code>onNotificationReceived</code>, <code>getTaskConfig</code></td><td>OneSignal 원격 푸시 수신 가공</td></tr>
@@ -624,8 +670,28 @@ sequenceDiagram
       </div>
     </section>
 
+    <section id="dynamic">
+      <h2><span class="no">14</span>동적 분석 (런타임 확인)</h2>
+      <p class="lede">기기에서 앱을 실행하고 logcat·화면을 관찰했습니다(로그인·거래 요청은 발생시키지 않음). 정적 추론을 사실로 확인하고, 실행 코드가 APK와 다름을 확인했습니다 <span class="tag obs">관찰</span>.</p>
+      <div class="two">
+        <div class="domain">
+          <h3>런타임에서 확인된 것</h3>
+          <ul class="plain">
+            <li>구동 JS는 APK 내장본이 아니라 <strong>CodePush OTA 번들</strong>(<code>files/CodePush/c32f6664…/index.android.bundle</code>) → 실제 코드가 APK와 다를 수 있음</li>
+            <li><strong>React Native Bridgeless(New Architecture)</strong>로 기동, Fabric 코드젠 로드</li>
+            <li>하단 탭 4개 화면 확정: <strong>홈 · 건강관리 · 내 진료 · 더보기</strong></li>
+            <li>SDK 초기화: Firebase(FA), OneSignal(공개 appId), AppsFlyer, Sentry(<code>auto-init: false</code> 수동), WorkManager</li>
+            <li>네이티브 모듈(NotificationServiceExtension 등) 실제 로드 확인</li>
+          </ul>
+        </div>
+        <div class="note">
+          <p><strong>트래픽 캡처는 하지 못했습니다.</strong> 기기가 비루팅(<code>release-keys</code>, non-debuggable)이고, APK에 커스텀 network security config가 없어 플랫폼 기본값을 씁니다. Android 14+에서 앱은 시스템 CA만 신뢰하므로, 루팅이나 앱 리패키징 없이는 HTTPS 본문을 복호화(mitmproxy)할 수 없습니다. 따라서 실제 요청·응답 본문은 이번에도 미확인입니다.</p>
+        </div>
+      </div>
+    </section>
+
     <section id="limits">
-      <h2><span class="no">14</span>분석 근거와 한계</h2>
+      <h2><span class="no">15</span>분석 근거와 한계</h2>
       <div class="tbl">
         <table>
           <thead><tr><th>근거</th><th>방법</th><th>얻은 것</th></tr></thead>
@@ -634,13 +700,15 @@ sequenceDiagram
             <tr><td>매니페스트</td><td>aapt2 dump xmltree</td><td>컴포넌트·권한·인텐트·메타데이터</td></tr>
             <tr><td>DEX 4개</td><td>dexdump (30,737 클래스)</td><td>네이티브 모듈·메서드</td></tr>
             <tr><td>Hermes 번들</td><td>hermes-dec 디컴파일 + HBC 문자열 테이블(53,783) 파싱</td><td>GraphQL 전문·데이터 모델·라우트·토큰 흐름·설정·이벤트</td></tr>
-            <tr><td>GraphQL 문서</td><td>번들 내 문서 197개 자체 파서로 구조화</td><td>연산 시그니처·fragment·enum</td></tr>
+            <tr><td>GraphQL 문서</td><td>번들 내 문서 197개 자체 파서로 구조화</td><td>연산 시그니처·fragment·enum·상태 머신</td></tr>
+            <tr><td>동적 (런타임)</td><td>앱 실행 + logcat·dumpsys·화면 캡처 (로그인·거래 없음)</td><td>탭 구성·New Arch·CodePush OTA·SDK 초기화 확인</td></tr>
+            <tr><td>네이티브 로직</td><td>dexdump 디스어셈블 (JADX는 보안 정책으로 미실행)</td><td>IntegrityModule 루팅 탐지 로직</td></tr>
           </tbody>
         </table>
       </div>
       <div class="note">
-        <p><strong>여전히 남는 한계.</strong> 정적 분석만 했고 앱을 실행하거나 트래픽을 캡처하지 않았습니다. 따라서 실제 호출 순서·서버 응답·서버 내부 구조는 미확인이며, 흐름도(8장)와 일부 서버 역할 구분은 추론입니다.</p>
-        <p>Hermes 디컴파일 결과는 레지스터 기반 의사 코드라 변수명·제어흐름이 원본과 다릅니다. 함수 단위의 세밀한 분기 조건은 선별적으로만 확인했습니다. 네이티브 Kotlin 본문은 이 환경의 실행 제약으로 디컴파일하지 않고 메서드 시그니처만 사용했습니다.</p>
+        <p><strong>여전히 남는 한계.</strong> 가장 큰 공백은 <strong>서버 요청·응답 본문</strong>입니다. 기기 비루팅과 기본 network security config 때문에 HTTPS 트래픽을 복호화하지 못했습니다(13장). 따라서 실제 호출 순서·서버 응답·서버 내부 구조는 미확인이며, 흐름도(8장)는 추론입니다. 완전한 검증은 루팅 기기나 리패키징 앱이 전제됩니다.</p>
+        <p>Hermes 디컴파일 결과는 레지스터 기반 의사 코드라 변수명·제어흐름이 원본과 다릅니다. 네이티브 Kotlin 본문은 JADX가 보안 정책으로 막혀 바이트코드(dexdump) 수준으로만 복원했습니다.</p>
         <p>API 키·토큰·DSN 값은 이 문서에 옮기지 않았습니다.</p>
       </div>
     </section>
