@@ -2,6 +2,8 @@
 
 굿닥(Goodoc) Android 앱(`com.ksncho.hospitalinfo` v50.14.29423)을 정적 분석해 재구성한 소프트웨어 설계도입니다.
 
+**[페이지로 이동](https://moonlightpark.github.io/hospitalinfo/docs/gooddoc-android-blueprint.html)** (GitHub Pages)
+
 - 설계도: [docs/gooddoc-android-blueprint.html](docs/gooddoc-android-blueprint.html) (브라우저로 열면 다이어그램이 렌더링됩니다)
 
 ## 담긴 내용
